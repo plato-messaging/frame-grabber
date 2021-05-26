@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "avcodec.h": "c",
+    "ios": "c",
+    "stdint.h": "c",
+    "cstdlib": "c",
+    "locale": "c",
+    "ostream": "c",
+    "new": "c"
+  }
+}

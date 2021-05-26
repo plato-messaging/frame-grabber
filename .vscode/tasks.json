@@ -1,0 +1,80 @@
+{
+  "version": "2.0.0",
+  "tasks": [{
+      "type": "cppbuild",
+      "label": "Build",
+      "command": "/usr/bin/clang",
+      "args": [
+        "-g",
+        "${workspaceFolder}/src/main.c",
+        "-o",
+        "${workspaceFolder}/out/testFFMpeg",
+        "-lavcodec",
+        "-lavformat",
+        "-lswscale",
+        "-lavutil",
+        "-lavformat",
+        "-ljpeg"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "compilateur : /usr/bin/clang"
+    }, {
+      "type": "cppbuild",
+      "label": "Build test",
+      "command": "/usr/bin/clang",
+      "args": [
+        "-g",
+        "${workspaceFolder}/src/main_take2.c",
+        "-o",
+        "${workspaceFolder}/out/test",
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "compilateur : /usr/bin/clang"
+    },
+    {
+      "type": "cppbuild",
+      "label": "Build2",
+      "command": "/usr/bin/clang",
+      "args": [
+        "-g",
+        "${workspaceFolder}/src/main_take2.c",
+        "-o",
+        "${workspaceFolder}/out/testFFMpeg2",
+        "-lavcodec",
+        "-lavformat",
+        "-lswscale",
+        "-lavutil",
+        "-lavfilter"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "compilateur : /usr/bin/clang"
+    }
+  ]
+}
