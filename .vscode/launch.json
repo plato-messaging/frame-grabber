@@ -9,7 +9,7 @@
     "request": "launch",
     "program": "${workspaceFolder}/out/testFFMpeg",
     "args": [
-      "${workspaceFolder}/IMG_0010.MOV"
+      "${workspaceFolder}/IMG_0007.MP4"
     ],
     "stopAtEntry": false,
     "cwd": "${workspaceFolder}",

@@ -166,7 +166,7 @@ static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFr
   ret = avcodec_send_frame(encoder, src_frame);
   if (ret < 0)
   {
-    fprintf(stderr, "Error sending a src_frame for encoding\n");
+    fprintf(stderr, "Error sending a src_frame for encoding : %s\n", av_err2str(ret));
     exit(1);
   }
 
@@ -219,7 +219,7 @@ static int decode_packet(AVCodecContext *dec, const AVPacket *pkt, AVFrame *fram
 
     // write the frame data to output file
     if (dec->codec->type == AVMEDIA_TYPE_VIDEO)
-      return 200; //output_video_frame(frame);
+      return 200;
 
     av_frame_unref(frame);
     if (ret < 0)
@@ -417,7 +417,7 @@ int grab_frame(uint8_t *in_data, size_t in_size,
 
   /* flush the decoders */
   if (decoder)
-    decode_packet(decoder, NULL, frame);
+    avcodec_send_packet(decoder, NULL);
 
   printf("Demuxing succeeded.\n");
 

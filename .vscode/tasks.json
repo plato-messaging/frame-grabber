@@ -59,5 +59,34 @@
       },
       "detail": "compilateur : /usr/bin/clang"
     },
+    {
+      "type": "cppbuild",
+      "label": "Build library",
+      "command": "/usr/bin/clang",
+      "args": [
+        "-g",
+        "${workspaceFolder}/src/main.c",
+        "${workspaceFolder}/src/frame_grabber.c",
+        "-o",
+        "${workspaceFolder}/out/libframegrabber",
+        "-lavcodec",
+        "-lavformat",
+        "-lswscale",
+        "-lavutil",
+        "-lavformat",
+        "-ljpeg"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "compilateur : /usr/bin/clang"
+    }
   ]
 }
