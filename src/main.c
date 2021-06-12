@@ -1,10 +1,9 @@
 /**
  * TODO:
- * - Read packet and set them directly in jpeglib writer
+ * - Read input from DynBuffer rather than from file
  * - Wrap with Rust
  * - Rotate by rotate angle
  * 
- * For reference: how to use JPEGLIB here https://gist.github.com/PhirePhly/3080633
  */
 
 #include <libavutil/imgutils.h>
@@ -41,7 +40,7 @@ static int ofmt_write_trailer(AVFormatContext *s)
 
 /**
  * Simple write data to avio
- * Otherwise, multipart header (Content_Type & Content-Lenght) are added
+ * Otherwise, multipart header (Content_Type & Content-Lentgh) are added
  */
 static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
 {
@@ -111,13 +110,17 @@ static int init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder
   (*encoder)->sample_aspect_ratio = decoder->sample_aspect_ratio;
   (*encoder)->pix_fmt = encoding_codec->pix_fmts[0];
   (*encoder)->time_base = one;
-  ret = avcodec_parameters_from_context(out_stream->codecpar, *encoder);
-  if (ret < 0)
+
+  if (avcodec_parameters_from_context(out_stream->codecpar, *encoder) < 0)
   {
     fprintf(stderr, "Failed to copy parameters to stream");
-    return ret;
+    exit(1);
   }
-  avcodec_open2(*encoder, encoding_codec, NULL);
+  if (avcodec_open2(*encoder, encoding_codec, NULL) < 0)
+  {
+    fprintf(stderr, "Failed to open encoding context");
+    exit(1);
+  }
   out_format_ctx->pb = avio_ctx;
   out_format_ctx->oformat->write_header = ofmt_write_header;
   out_format_ctx->oformat->write_trailer = ofmt_write_trailer;
@@ -171,7 +174,6 @@ static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFr
     av_write_frame(out_format_ctx, packet);
   };
   av_packet_unref(packet);
-  av_write_trailer(out_format_ctx);
   return ret;
 }
 
