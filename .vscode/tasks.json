@@ -7,6 +7,7 @@
       "args": [
         "-g",
         "${workspaceFolder}/src/main.c",
+        "${workspaceFolder}/src/frame_grabber.c",
         "-o",
         "${workspaceFolder}/out/testFFMpeg",
         "-Ofast",
@@ -36,6 +37,7 @@
       "args": [
         "-g",
         "${workspaceFolder}/src/main.c",
+        "${workspaceFolder}/src/frame_grabber.c",
         "-o",
         "${workspaceFolder}/out/testFFMpeg",
         "-lavcodec",
