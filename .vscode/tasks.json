@@ -27,15 +27,21 @@
         "isDefault": true
       },
       "detail": "compilateur : /usr/bin/clang"
-    }, {
+    },
+    {
       "type": "cppbuild",
-      "label": "Build test",
+      "label": "Build2",
       "command": "/usr/bin/clang",
       "args": [
         "-g",
         "${workspaceFolder}/src/main_take2.c",
         "-o",
-        "${workspaceFolder}/out/test",
+        "${workspaceFolder}/out/testFFMpeg2",
+        "-lavcodec",
+        "-lavformat",
+        "-lswscale",
+        "-lavutil",
+        "-lavfilter"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -51,13 +57,41 @@
     },
     {
       "type": "cppbuild",
-      "label": "Build2",
+      "label": "Build3",
       "command": "/usr/bin/clang",
       "args": [
         "-g",
-        "${workspaceFolder}/src/main_take2.c",
+        "${workspaceFolder}/src/main_take3.c",
         "-o",
-        "${workspaceFolder}/out/testFFMpeg2",
+        "${workspaceFolder}/out/testFFMpeg3",
+        "-lavcodec",
+        "-lavformat",
+        "-lswscale",
+        "-lavutil",
+        "-lavfilter"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "compilateur : /usr/bin/clang"
+    },
+    {
+      "type": "cppbuild",
+      "label": "Build3Prod",
+      "command": "/usr/bin/clang",
+      "args": [
+        "-g",
+        "${workspaceFolder}/src/main_take3.c",
+        "-Ofast",
+        "-o",
+        "${workspaceFolder}/out/testFFMpeg3",
         "-lavcodec",
         "-lavformat",
         "-lswscale",
