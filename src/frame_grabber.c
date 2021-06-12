@@ -17,7 +17,7 @@ typedef struct DynBuffer
 } DynBuffer;
 
 /**
- * We do not want default header that add multipart boudary "--ffmpeg"
+ * We do not want default header that add multipart boundary "--ffmpeg"
  */
 static int ofmt_write_header(AVFormatContext *s)
 {
@@ -25,7 +25,7 @@ static int ofmt_write_header(AVFormatContext *s)
 }
 
 /**
- * We do not want default header that add multipart boudary "--ffmpeg"
+ * We do not want default header that add multipart boudnary "--ffmpeg"
  */
 static int ofmt_write_trailer(AVFormatContext *s)
 {
@@ -34,7 +34,7 @@ static int ofmt_write_trailer(AVFormatContext *s)
 
 /**
  * Simply write data to avio
- * Otherwise, multipart header (Content_Type & Content-Lentgh) are added
+ * Otherwise, multipart header (Content_Type & Content-Length) are added
  */
 static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
 {
