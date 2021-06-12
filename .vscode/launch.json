@@ -4,51 +4,18 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [{
-      "name": "Debug3",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/out/testFFMpeg3",
-      "args": [
-        "${workspaceFolder}/IMG_0010.MOV"
-      ],
-      "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
-      "environment": [],
-      "externalConsole": false,
-      "MIMode": "lldb",
-      "preLaunchTask": "Build3"
-    },
-    {
-      "name": "Debug2",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/out/testFFMpeg2",
-      "args": [
-        "${workspaceFolder}/IMG_0010.MOV",
-        "${workspaceFolder}/video",
-        "${workspaceFolder}/audio"
-      ],
-      "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
-      "environment": [],
-      "externalConsole": false,
-      "MIMode": "lldb",
-      "preLaunchTask": "Build2"
-    },
-    {
-      "name": "Debug",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/out/testFFMpeg",
-      "args": [
-        "${workspaceFolder}/IMG_0010.MOV"
-      ],
-      "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
-      "environment": [],
-      "externalConsole": false,
-      "MIMode": "lldb",
-      "preLaunchTask": "Build"
-    }
-  ]
+    "name": "Debug",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/out/testFFMpeg",
+    "args": [
+      "${workspaceFolder}/IMG_0010.MOV"
+    ],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "lldb",
+    "preLaunchTask": "Build"
+  }]
 }

@@ -31,6 +31,23 @@
     "memory": "c",
     "ratio": "c",
     "tuple": "c",
-    "utility": "c"
+    "utility": "c",
+    "__debug": "cpp",
+    "__locale": "cpp",
+    "__string": "cpp",
+    "atomic": "cpp",
+    "bitset": "cpp",
+    "cstdio": "cpp",
+    "cstring": "cpp",
+    "ctime": "cpp",
+    "cwchar": "cpp",
+    "memory_resource": "cpp",
+    "initializer_list": "cpp",
+    "istream": "cpp",
+    "mutex": "cpp",
+    "optional": "cpp",
+    "system_error": "cpp",
+    "typeinfo": "cpp",
+    "unordered_map": "cpp"
   }
 }

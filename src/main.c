@@ -1,14 +1,12 @@
 /**
  * TODO:
- * - Read input from DynBuffer rather than from file
  * - Wrap with Rust
- * - Rotate by rotate angle
- * 
  */
 
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/timestamp.h>
+#include <libavutil/file.h>
 #include <libavformat/avformat.h>
 
 typedef struct DynBuffer
@@ -16,11 +14,6 @@ typedef struct DynBuffer
   int pos, allocated_size, size;
   uint8_t *buffer;
 } DynBuffer;
-
-uint8_t *avio_ctx_buffer;
-size_t buffer_size;
-struct DynBuffer *buffer_stream;
-FILE *out_file;
 
 /**
  * We do not want default header that add multipart boudary "--ffmpeg"
@@ -39,7 +32,7 @@ static int ofmt_write_trailer(AVFormatContext *s)
 }
 
 /**
- * Simple write data to avio
+ * Simply write data to avio
  * Otherwise, multipart header (Content_Type & Content-Lentgh) are added
  */
 static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
@@ -49,6 +42,9 @@ static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
   return 0;
 }
 
+/**
+ * Adds packet data to destination buffer
+ */
 static int write_packet(void *opaque, uint8_t *buf, int buf_size)
 {
   DynBuffer *d = opaque;
@@ -82,6 +78,22 @@ static int write_packet(void *opaque, uint8_t *buf, int buf_size)
   d->pos = new_size;
   if (d->pos > d->size)
     d->size = d->pos;
+  return buf_size;
+}
+
+static int read_packet(void *opaque, uint8_t *buf, int buf_size)
+{
+  DynBuffer *d = opaque;
+  buf_size = FFMIN(buf_size, d->size);
+
+  if (!buf_size)
+    return AVERROR_EOF;
+
+  /* copy internal buffer data to buf */
+  memcpy(buf, d->buffer, buf_size);
+  d->buffer += buf_size;
+  d->size -= buf_size;
+
   return buf_size;
 }
 
@@ -216,8 +228,8 @@ static int decode_packet(AVCodecContext *dec, const AVPacket *pkt, AVFrame *fram
   return ret;
 }
 
-static int open_codec_context(const char *src_filename, int *stream_idx,
-                              AVCodecContext **dec_ctx, AVFormatContext *fmt_ctx, enum AVMediaType type)
+static int open_codec_context(int *stream_idx, AVCodecContext **dec_ctx,
+                              AVFormatContext *fmt_ctx, enum AVMediaType type)
 {
   int ret, stream_index;
   AVStream *st;
@@ -227,8 +239,7 @@ static int open_codec_context(const char *src_filename, int *stream_idx,
   ret = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
   if (ret < 0)
   {
-    fprintf(stderr, "Could not find %s stream in input file '%s'\n",
-            av_get_media_type_string(type), src_filename);
+    fprintf(stderr, "Could not find %s stream in input\n", av_get_media_type_string(type));
     return ret;
   }
   else
@@ -275,14 +286,14 @@ static int open_codec_context(const char *src_filename, int *stream_idx,
   return 0;
 }
 
-int main(int argc, char **argv)
+int grab_frame(uint8_t *in_data, size_t in_size,
+               uint8_t **out_data, size_t *out_size, char **rotate)
 {
   int ret = 0;
   time_t start = clock();
   AVFormatContext *in_format_ctx = NULL;
   AVCodecContext *decoder = NULL;
   AVStream *video_stream = NULL;
-  const char *src_filename = NULL;
   AVFormatContext *out_format_ctx = NULL;
   AVCodecContext *encoder = NULL;
 
@@ -290,35 +301,57 @@ int main(int argc, char **argv)
   AVFrame *frame = NULL;
   AVPacket pkt;
 
-  if (argc != 2)
+  AVIOContext *read_avio_ctx = NULL;
+  ssize_t buffer_initial_size = 4096;
+  uint8_t *read_avio_ctx_buffer = NULL;
+  DynBuffer in_byte_buffer = {0};
+  in_byte_buffer.size = in_size;
+  in_byte_buffer.buffer = in_data;
+  read_avio_ctx_buffer = av_malloc(buffer_initial_size);
+
+  if (!(in_format_ctx = avformat_alloc_context()))
   {
-    fprintf(stderr, "usage: %s  input_file\n",
-            argv[0]);
-    exit(1);
+    ret = AVERROR(ENOMEM);
+    goto end;
   }
-  src_filename = argv[1];
+
+  if (!read_avio_ctx_buffer)
+  {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+  read_avio_ctx = avio_alloc_context(read_avio_ctx_buffer, buffer_initial_size,
+                                     0, &in_byte_buffer, &read_packet, NULL, NULL);
+  if (!read_avio_ctx)
+  {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+  in_format_ctx->pb = read_avio_ctx;
 
   /* open input file, and allocate format context */
-  if (avformat_open_input(&in_format_ctx, src_filename, NULL, NULL) < 0)
+  ret = avformat_open_input(&in_format_ctx, NULL, NULL, NULL);
+  if (ret < 0)
   {
-    fprintf(stderr, "Could not open source file %s\n", src_filename);
+    fprintf(stderr, "Could not read bytes : %s\n", av_err2str(ret));
     exit(1);
   }
 
   /* retrieve stream information */
-  if (avformat_find_stream_info(in_format_ctx, NULL) < 0)
+  ret = avformat_find_stream_info(in_format_ctx, NULL);
+  if (ret < 0)
   {
-    fprintf(stderr, "Could not find stream information\n");
+    fprintf(stderr, "Could not find stream information : %s\n", av_err2str(ret));
     exit(1);
   }
 
-  if (open_codec_context(src_filename, &video_stream_idx, &decoder, in_format_ctx, AVMEDIA_TYPE_VIDEO) >= 0)
+  if (open_codec_context(&video_stream_idx, &decoder, in_format_ctx, AVMEDIA_TYPE_VIDEO) >= 0)
   {
     video_stream = in_format_ctx->streams[video_stream_idx];
   }
 
   /* dump input information to stderr */
-  av_dump_format(in_format_ctx, 0, src_filename, 0);
+  av_dump_format(in_format_ctx, 0, "memory", 0);
 
   if (!video_stream)
   {
@@ -334,22 +367,22 @@ int main(int argc, char **argv)
     goto end;
   }
 
-  // Output file in memory buffer
-  ssize_t buffer_initial_size = 4096;
-  uint8_t *avio_ctx_buffer = malloc(buffer_initial_size);
-  DynBuffer byte_buffer = {0};
-  byte_buffer.size = 4096;
-  byte_buffer.buffer = malloc(byte_buffer.size);
-  AVIOContext *avio_ctx = avio_alloc_context(avio_ctx_buffer, buffer_initial_size, 1, (void *)&byte_buffer, NULL, write_packet, NULL);
-  if (!avio_ctx)
+  // Output in memory buffer
+  uint8_t *write_avio_ctx_buffer = malloc(buffer_initial_size);
+  DynBuffer out_bytet_buffer = {0};
+  AVIOContext *write_avio_ctx = NULL;
+  out_bytet_buffer.size = 4096;
+  out_bytet_buffer.buffer = malloc(out_bytet_buffer.size);
+  write_avio_ctx = avio_alloc_context(write_avio_ctx_buffer, buffer_initial_size, 1,
+                                      (void *)&out_bytet_buffer, NULL, write_packet, NULL);
+  if (!write_avio_ctx)
   {
     fprintf(stderr, "Could not allocate AV I/O context");
     goto end;
   }
 
   // initialize encoder
-  out_file = fopen("in_memory_file.jpeg", "w");
-  init_encoder(out_format_ctx, decoder, &encoder, avio_ctx);
+  init_encoder(out_format_ctx, decoder, &encoder, write_avio_ctx);
 
   frame = av_frame_alloc();
   if (!frame)
@@ -365,7 +398,7 @@ int main(int argc, char **argv)
   pkt.size = 0;
 
   if (video_stream)
-    printf("Demuxing video from file '%s'\n", src_filename);
+    printf("Demuxing video from data'\n");
 
   /* read frames from the file */
   while (av_read_frame(in_format_ctx, &pkt) >= 0)
@@ -391,25 +424,76 @@ int main(int argc, char **argv)
   {
     printf("GOT FRAME!!!!\n");
     encode(out_format_ctx, encoder, frame, decoder->width, decoder->height);
-    fclose(out_file);
+  }
+
+  // get rotation if any
+  AVDictionaryEntry *rotate_entry = av_dict_get(in_format_ctx->streams[video_stream_idx]->metadata, "rotate", NULL, AV_DICT_MATCH_CASE);
+  if (rotate_entry && rotate_entry->value)
+  {
+    // last +1 is for nul ASCII code for the string
+    *rotate = (char *)malloc(strlen(rotate_entry->value) + 1);
+    strcpy(*rotate, rotate_entry->value);
   }
 
 end:
   avcodec_free_context(&decoder);
   avformat_close_input(&in_format_ctx);
   av_frame_free(&frame);
-  av_free(avio_ctx_buffer);
   avformat_free_context(out_format_ctx);
   avcodec_free_context(&encoder);
-  av_free(avio_ctx);
+  if (read_avio_ctx)
+    av_freep(&read_avio_ctx->buffer);
+  avio_context_free(&read_avio_ctx);
+  if (write_avio_ctx)
+    av_freep(&write_avio_ctx->buffer);
+  avio_context_free(&write_avio_ctx);
 
-  /* write buffer to file */
-  printf("Byte buffer size: %d\n", byte_buffer.size);
-  FILE *out_file = fopen("in_memory_file.jpeg", "w");
-  fwrite(byte_buffer.buffer, byte_buffer.size, 1, out_file);
-  fclose(out_file);
-  av_free(byte_buffer.buffer);
   unsigned long millis = (clock() - start) * 1000 / CLOCKS_PER_SEC;
   printf("Took %ldms\n", millis);
-  return ret < 0;
+  *out_data = out_bytet_buffer.buffer;
+  *out_size = out_bytet_buffer.size;
+  return 0;
+}
+
+int main(int argc, char **argv)
+{
+  int ret;
+  const char *src_filename;
+  uint8_t *buffer = NULL;
+  size_t buffer_size;
+  uint8_t *jpeg_data = NULL;
+  size_t jpeg_size;
+  char *rotate = NULL;
+  if (argc != 2)
+  {
+    fprintf(stderr, "usage: %s  input_file\n",
+            argv[0]);
+    exit(1);
+  }
+
+  src_filename = argv[1];
+
+  /* slurp file content into buffer */
+  fprintf(stdout, "Slurping data from %s\n", src_filename);
+  ret = av_file_map(src_filename, &buffer, &buffer_size, 0, NULL);
+  if (ret < 0)
+  {
+    fprintf(stderr, "Could slurp bytes into buffers");
+    exit(1);
+  }
+
+  grab_frame(buffer, buffer_size, &jpeg_data, &jpeg_size, &rotate);
+
+  printf("Rotation of picture: %s\n", rotate);
+
+  /* write buffer to file */
+  printf("Byte buffer size: %lu\n", jpeg_size);
+  FILE *out_file = fopen("in_memory_file.jpeg", "w");
+  fwrite(jpeg_data, jpeg_size, 1, out_file);
+  fclose(out_file);
+
+  // Cleanup
+  av_file_unmap(buffer, buffer_size);
+  av_free(jpeg_data);
+  return 0;
 }
