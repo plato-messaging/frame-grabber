@@ -370,12 +370,12 @@ int grab_frame(uint8_t *in_data, size_t in_size,
 
   // Output in memory buffer
   uint8_t *write_avio_ctx_buffer = malloc(buffer_initial_size);
-  DynBuffer out_bytet_buffer = {0};
+  DynBuffer out_byte_buffer = {0};
   AVIOContext *write_avio_ctx = NULL;
-  out_bytet_buffer.size = 4096;
-  out_bytet_buffer.buffer = malloc(out_bytet_buffer.size);
+  out_byte_buffer.size = 4096;
+  out_byte_buffer.buffer = malloc(out_byte_buffer.size);
   write_avio_ctx = avio_alloc_context(write_avio_ctx_buffer, buffer_initial_size, 1,
-                                      (void *)&out_bytet_buffer, NULL, write_packet, NULL);
+                                      (void *)&out_byte_buffer, NULL, write_packet, NULL);
   if (!write_avio_ctx)
   {
     fprintf(stderr, "Could not allocate AV I/O context");
@@ -451,7 +451,7 @@ end:
 
   unsigned long millis = (clock() - start) * 1000 / CLOCKS_PER_SEC;
   printf("Took %ldms\n", millis);
-  *out_data = out_bytet_buffer.buffer;
-  *out_size = out_bytet_buffer.size;
+  *out_data = out_byte_buffer.buffer;
+  *out_size = out_byte_buffer.size;
   return 0;
 }
