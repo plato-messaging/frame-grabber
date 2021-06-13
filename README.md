@@ -9,4 +9,4 @@ Video is provided as a buffer of bytes and returns the frame as a buffer of byte
 - Copy `out/libfgrabber.dylib` to `/usr/local/lib`
 
 ### TODO
-- provide `build.sh` working for Linux
+- provide `build.sh` for Linux
