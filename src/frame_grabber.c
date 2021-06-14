@@ -1,14 +1,15 @@
-/**
- * TODO:
- * - Wrap with Rust
- */
-
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/timestamp.h>
 #include <libavutil/file.h>
 #include <libavformat/avformat.h>
 #include "frame_grabber.h"
+
+/**
+ * @brief Grabs the first frame of video data provided in a byte array
+ * Return the frame in JPEG format. The data is returned in a byte array along with
+ * any rotate hints 
+ */
 
 typedef struct DynBuffer
 {
