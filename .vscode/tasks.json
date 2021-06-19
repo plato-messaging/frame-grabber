@@ -13,10 +13,7 @@
         "-Ofast",
         "-lavcodec",
         "-lavformat",
-        "-lswscale",
         "-lavutil",
-        "-lavformat",
-        "-ljpeg"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -42,10 +39,7 @@
         "${workspaceFolder}/out/testFFMpeg",
         "-lavcodec",
         "-lavformat",
-        "-lswscale",
         "-lavutil",
-        "-lavformat",
-        "-ljpeg"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -70,11 +64,8 @@
         "-o",
         "${workspaceFolder}/out/libframegrabber",
         "-lavcodec",
-        "-lavformat",
-        "-lswscale",
         "-lavutil",
         "-lavformat",
-        "-ljpeg"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

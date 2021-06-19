@@ -9,6 +9,13 @@
  * @brief Grabs the first frame of video data provided in a byte array
  * Return the frame in JPEG format. The data is returned in a byte array along with
  * any rotate hints 
+ * 
+ * Memory tests:
+ * - 100 000 grabs -> memory capped at 21MB (seems to stabilize after the 50 000 first grabs)
+ * Performance:
+ * ~ 138 grabs per second
+ * 
+ * TODO: analyse further memory
  */
 
 typedef struct DynBuffer
@@ -153,17 +160,11 @@ static int init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder
 static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFrame *src_frame,
                   int width, int height)
 {
-  int ret;
+  int ret = 0;
   int data_size = 0;
   int cursor = 0;
   AVPacket *packet = av_packet_alloc();
-  AVFrame *dst_frame = av_frame_alloc();
 
-  if (ret < 0)
-  {
-    fprintf(stderr, "Error writing header\n");
-    exit(1);
-  }
   ret = avcodec_send_frame(encoder, src_frame);
   if (ret < 0)
   {
@@ -187,7 +188,9 @@ static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFr
     }
     av_write_frame(out_format_ctx, packet);
   };
+  av_write_frame(out_format_ctx, NULL);
   av_packet_unref(packet);
+  av_packet_free(&packet);
   return ret;
 }
 
@@ -292,20 +295,24 @@ int grab_frame(uint8_t *in_data, size_t in_size,
                uint8_t **out_data, size_t *out_size, char **rotate)
 {
   int ret = 0;
-  time_t start = clock();
+  size_t buffer_initial_size = 4096;
+
   AVFormatContext *in_format_ctx = NULL;
   AVCodecContext *decoder = NULL;
   AVStream *video_stream = NULL;
-  AVFormatContext *out_format_ctx = NULL;
-  AVCodecContext *encoder = NULL;
-
-  int video_stream_idx = -1;
-  AVFrame *frame = NULL;
-  AVPacket pkt;
 
   AVIOContext *read_avio_ctx = NULL;
-  ssize_t buffer_initial_size = 4096;
   uint8_t *read_avio_ctx_buffer = NULL;
+
+  AVFormatContext *out_format_ctx = NULL;
+  AVCodecContext *encoder = NULL;
+  AVIOContext *write_avio_ctx = NULL;
+  uint8_t *write_avio_ctx_buffer = NULL;
+
+  AVFrame *frame = NULL;
+  AVPacket *pkt = NULL;
+  int video_stream_idx = -1;
+
   DynBuffer in_byte_buffer = {0};
   in_byte_buffer.size = in_size;
   in_byte_buffer.buffer = in_data;
@@ -353,7 +360,7 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   }
 
   /* dump input information to stderr */
-  av_dump_format(in_format_ctx, 0, "memory", 0);
+  // av_dump_format(in_format_ctx, 0, "memory", 0);
 
   if (!video_stream)
   {
@@ -370,11 +377,10 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   }
 
   // Output in memory buffer
-  uint8_t *write_avio_ctx_buffer = malloc(buffer_initial_size);
   DynBuffer out_byte_buffer = {0};
-  AVIOContext *write_avio_ctx = NULL;
   out_byte_buffer.size = 4096;
-  out_byte_buffer.buffer = malloc(out_byte_buffer.size);
+  out_byte_buffer.buffer = av_malloc(out_byte_buffer.size);
+  write_avio_ctx_buffer = av_malloc(buffer_initial_size);
   write_avio_ctx = avio_alloc_context(write_avio_ctx_buffer, buffer_initial_size, 1,
                                       (void *)&out_byte_buffer, NULL, write_packet, NULL);
   if (!write_avio_ctx)
@@ -395,21 +401,19 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   }
 
   /* initialize packet, set data to NULL, let the demuxer fill it */
-  av_init_packet(&pkt);
-  pkt.data = NULL;
-  pkt.size = 0;
-
-  if (video_stream)
-    printf("Demuxing video from data'\n");
+  pkt = av_packet_alloc();
+  av_init_packet(pkt);
+  pkt->data = NULL;
+  pkt->size = 0;
 
   /* read frames from the file */
-  while (av_read_frame(in_format_ctx, &pkt) >= 0)
+  while (av_read_frame(in_format_ctx, pkt) >= 0)
   {
     // check if the packet belongs to a stream we are interested in, otherwise
     // skip it
-    if (pkt.stream_index == video_stream_idx)
-      ret = decode_packet(decoder, &pkt, frame);
-    av_packet_unref(&pkt);
+    if (pkt->stream_index == video_stream_idx)
+      ret = decode_packet(decoder, pkt, frame);
+    av_packet_unref(pkt);
     if (ret < 0)
       break;
     if (ret == 200)
@@ -420,11 +424,8 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   if (decoder)
     avcodec_send_packet(decoder, NULL);
 
-  printf("Demuxing succeeded.\n");
-
   if (ret == 200)
   {
-    printf("GOT FRAME!!!!\n");
     encode(out_format_ctx, encoder, frame, decoder->width, decoder->height);
   }
 
@@ -438,21 +439,26 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   }
 
 end:
+  av_packet_free(&pkt);
   avcodec_free_context(&decoder);
   avformat_close_input(&in_format_ctx);
+  avformat_free_context(in_format_ctx);
   av_frame_free(&frame);
-  avformat_free_context(out_format_ctx);
-  avcodec_free_context(&encoder);
   if (read_avio_ctx)
     av_freep(&read_avio_ctx->buffer);
   avio_context_free(&read_avio_ctx);
+
   if (write_avio_ctx)
     av_freep(&write_avio_ctx->buffer);
   avio_context_free(&write_avio_ctx);
+  avcodec_free_context(&encoder);
+  avformat_free_context(out_format_ctx);
 
-  unsigned long millis = (clock() - start) * 1000 / CLOCKS_PER_SEC;
-  printf("Took %ldms\n", millis);
+  // free(&video_stream);
+  // free(&write_avio_ctx_buffer);
+  // free(&read_avio_ctx_buffer);
+
   *out_data = out_byte_buffer.buffer;
   *out_size = out_byte_buffer.size;
-  return 0;
+  return ret;
 }

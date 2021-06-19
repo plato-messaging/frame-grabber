@@ -23,7 +23,6 @@ int main(int argc, char **argv)
   src_filename = argv[1];
 
   /* slurp file content into buffer */
-  fprintf(stdout, "Slurping data from %s\n", src_filename);
   ret = av_file_map(src_filename, &buffer, &buffer_size, 0, NULL);
   if (ret < 0)
   {
@@ -33,10 +32,7 @@ int main(int argc, char **argv)
 
   grab_frame(buffer, buffer_size, &jpeg_data, &jpeg_size, &rotate);
 
-  printf("Rotation of picture: %s\n", rotate);
-
   /* write buffer to file */
-  printf("Byte buffer size: %lu\n", jpeg_size);
   FILE *out_file = fopen("in_memory_file.jpeg", "w");
   fwrite(jpeg_data, jpeg_size, 1, out_file);
   fclose(out_file);
