@@ -11,7 +11,7 @@ int main(int argc, char **argv)
   uint8_t *buffer = NULL;
   size_t buffer_size;
   uint8_t *jpeg_data = NULL;
-  size_t jpeg_size;
+  size_t jpeg_size = 0;
   char *rotate = NULL;
   if (argc != 2)
   {
@@ -26,19 +26,30 @@ int main(int argc, char **argv)
   ret = av_file_map(src_filename, &buffer, &buffer_size, 0, NULL);
   if (ret < 0)
   {
-    fprintf(stderr, "Could slurp bytes into buffers");
+    fprintf(stderr, "Could not slurp bytes into buffers");
     exit(1);
   }
+  fprintf(stdout, "Slurped file %s\n", src_filename);
 
-  grab_frame(buffer, buffer_size, &jpeg_data, &jpeg_size, &rotate);
+  ResponseStatus res = grab_frame(buffer, buffer_size, &jpeg_data, &jpeg_size, &rotate);
+  printf("ResponseStatus code is %d\n", res.code);
+  printf("ResponseStatus additional info: %s\n", res.description);
+
+  if (res.code != 200)
+  {
+    jpeg_data = NULL;
+    goto end;
+  }
 
   /* write buffer to file */
   FILE *out_file = fopen("in_memory_file.jpeg", "w");
   fwrite(jpeg_data, jpeg_size, 1, out_file);
   fclose(out_file);
 
+end:
   // Cleanup
   av_file_unmap(buffer, buffer_size);
-  av_free(jpeg_data);
+  if (jpeg_data)
+    av_free(jpeg_data);
   return 0;
 }

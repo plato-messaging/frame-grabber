@@ -14,9 +14,16 @@
  * - 100 000 grabs -> memory capped at 21MB (seems to stabilize after the 50 000 first grabs)
  * Performance:
  * ~ 138 grabs per second
- * 
- * TODO: analyse further memory
  */
+
+/** Everything went well */
+const int FG_OK = 200;
+/** Data is invalid for some reason (no stream found, corrupted file...) */
+const int FG_ERROR_INVALID_INPUT = 422;
+/** No frame found */
+const int FG_NOT_FOUND = 404;
+/** Internal problem */
+const int FG_ERROR_INTERNAL = 500;
 
 typedef struct DynBuffer
 {
@@ -24,26 +31,20 @@ typedef struct DynBuffer
   uint8_t *buffer;
 } DynBuffer;
 
-/**
- * We do not want default header that add multipart boundary "--ffmpeg"
- */
+// We do not want default header that add multipart boundary "--ffmpeg"
 static int ofmt_write_header(AVFormatContext *s)
 {
   return 0;
 }
 
-/**
- * We do not want default header that add multipart boudnary "--ffmpeg"
- */
+// We do not want default header that add multipart boudnary "--ffmpeg"
 static int ofmt_write_trailer(AVFormatContext *s)
 {
   return 0;
 }
 
-/**
- * Simply write data to avio
- * Otherwise, multipart header (Content_Type & Content-Length) are added
- */
+// Simply write data to avio
+// Otherwise, multipart header (Content_Type & Content-Length) are added
 static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
 {
   avio_write(s->pb, packet->data, packet->size);
@@ -51,12 +52,18 @@ static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
   return 0;
 }
 
-/**
- * Adds packet data to destination buffer
- */
+static ResponseStatus result_from(int code, char *description)
+{
+  ResponseStatus res = {0};
+  res.code = code;
+  res.description = description;
+  return res;
+}
+
 static int write_packet(void *opaque, uint8_t *buf, int buf_size)
 {
   DynBuffer *d = opaque;
+
   unsigned new_size, new_allocated_size;
 
   /* reallocate buffer if needed */
@@ -106,10 +113,11 @@ static int read_packet(void *opaque, uint8_t *buf, int buf_size)
   return buf_size;
 }
 
-static int init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder,
-                        AVCodecContext **encoder, AVIOContext *avio_ctx)
+static ResponseStatus init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder,
+                                   AVCodecContext **encoder, AVIOContext *avio_ctx)
 {
   int ret;
+  ResponseStatus res = {0};
   AVStream *out_stream;
   AVOutputFormat *output_fmt = av_guess_format("mpjpeg", NULL, NULL);
   enum AVCodecID codec_id = av_guess_codec(output_fmt, "mpjpeg", NULL, NULL, AVMEDIA_TYPE_VIDEO);
@@ -120,7 +128,7 @@ static int init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder
   if (!out_stream)
   {
     av_log(NULL, AV_LOG_ERROR, "Failed allocating output stream\n");
-    return AVERROR_UNKNOWN;
+    return result_from(FG_ERROR_INTERNAL, "Failed allocating output stream");
   }
   AVRational one = {0};
   one.den = 1;
@@ -135,12 +143,12 @@ static int init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder
   if (avcodec_parameters_from_context(out_stream->codecpar, *encoder) < 0)
   {
     fprintf(stderr, "Failed to copy parameters to stream");
-    exit(1);
+    return result_from(FG_ERROR_INTERNAL, "Failed to copy parameters to stream");
   }
   if (avcodec_open2(*encoder, encoding_codec, NULL) < 0)
   {
-    fprintf(stderr, "Failed to open encoding context");
-    exit(1);
+    fprintf(stderr, "Failed to open encoding context\n");
+    return result_from(FG_ERROR_INTERNAL, "Failed to open encoding context\n");
   }
   out_format_ctx->pb = avio_ctx;
   out_format_ctx->oformat->write_header = ofmt_write_header;
@@ -151,14 +159,13 @@ static int init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder
   ret = avformat_write_header(out_format_ctx, NULL);
   if (ret < 0)
   {
-    av_log(NULL, AV_LOG_ERROR, "Error occurred when opening output file\n");
-    return ret;
+    return result_from(FG_ERROR_INTERNAL, "Error occurred while writing header to output");
   }
-  return 0;
+  return result_from(FG_OK, "");
 }
 
-static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFrame *src_frame,
-                  int width, int height)
+static ResponseStatus encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFrame *src_frame,
+                             int width, int height)
 {
   int ret = 0;
   int data_size = 0;
@@ -168,8 +175,7 @@ static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFr
   ret = avcodec_send_frame(encoder, src_frame);
   if (ret < 0)
   {
-    fprintf(stderr, "Error sending a src_frame for encoding : %s\n", av_err2str(ret));
-    exit(1);
+    return result_from(FG_ERROR_INTERNAL, "Error sending a src_frame for encoding");
   }
 
   while (ret >= 0)
@@ -183,18 +189,17 @@ static int encode(AVFormatContext *out_format_ctx, AVCodecContext *encoder, AVFr
     }
     else if (ret < 0)
     {
-      fprintf(stderr, "Error during encoding\n");
-      exit(1);
+      return result_from(FG_ERROR_INTERNAL, "Error while encoding packet");
     }
     av_write_frame(out_format_ctx, packet);
   };
   av_write_frame(out_format_ctx, NULL);
   av_packet_unref(packet);
   av_packet_free(&packet);
-  return ret;
+  return result_from(FG_OK, "");
 }
 
-static int decode_packet(AVCodecContext *dec, const AVPacket *pkt, AVFrame *frame)
+static ResponseStatus decode_packet(AVCodecContext *dec, const AVPacket *pkt, AVFrame *frame)
 {
   int ret = 0;
 
@@ -202,8 +207,7 @@ static int decode_packet(AVCodecContext *dec, const AVPacket *pkt, AVFrame *fram
   ret = avcodec_send_packet(dec, pkt);
   if (ret < 0)
   {
-    fprintf(stderr, "Error submitting a packet for decoding (%s)\n", av_err2str(ret));
-    return ret;
+    return result_from(FG_ERROR_INTERNAL, "Error submitting a packet for decoding");
   }
 
   // get all the available frames from the decoder
@@ -215,26 +219,26 @@ static int decode_packet(AVCodecContext *dec, const AVPacket *pkt, AVFrame *fram
       // those two return values are special and mean there is no output
       // frame available, but there were no errors during decoding
       if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
-        return 0;
+        return result_from(FG_NOT_FOUND, "No frame found");
 
-      fprintf(stderr, "Error during decoding (%s)\n", av_err2str(ret));
-      return ret;
+      return result_from(FG_ERROR_INTERNAL, "Error while decoding packet");
     }
 
-    // write the frame data to output file
     if (dec->codec->type == AVMEDIA_TYPE_VIDEO)
-      return 200;
+      return result_from(FG_OK, "");
 
     av_frame_unref(frame);
     if (ret < 0)
-      return ret;
+    {
+      return result_from(FG_ERROR_INTERNAL, av_err2str(ret));
+    }
   }
 
-  return ret;
+  return result_from(FG_NOT_FOUND, "No frame found");
 }
 
-static int open_codec_context(int *stream_idx, AVCodecContext **dec_ctx,
-                              AVFormatContext *fmt_ctx, enum AVMediaType type)
+static ResponseStatus open_codec_context(int *stream_idx, AVCodecContext **dec_ctx,
+                                         AVFormatContext *fmt_ctx, enum AVMediaType type)
 {
   int ret, stream_index;
   AVStream *st;
@@ -244,8 +248,7 @@ static int open_codec_context(int *stream_idx, AVCodecContext **dec_ctx,
   ret = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
   if (ret < 0)
   {
-    fprintf(stderr, "Could not find %s stream in input\n", av_get_media_type_string(type));
-    return ret;
+    return result_from(FG_ERROR_INVALID_INPUT, "Could not find video stream");
   }
   else
   {
@@ -256,45 +259,38 @@ static int open_codec_context(int *stream_idx, AVCodecContext **dec_ctx,
     dec = avcodec_find_decoder(st->codecpar->codec_id);
     if (!dec)
     {
-      fprintf(stderr, "Failed to find %s codec\n",
-              av_get_media_type_string(type));
-      return AVERROR(EINVAL);
+      return result_from(FG_ERROR_INVALID_INPUT, "Failed to find codec");
     }
 
     /* Allocate a codec context for the decoder */
     *dec_ctx = avcodec_alloc_context3(dec);
     if (!*dec_ctx)
     {
-      fprintf(stderr, "Failed to allocate the %s codec context\n",
-              av_get_media_type_string(type));
-      return AVERROR(ENOMEM);
+      return result_from(FG_ERROR_INTERNAL, "Failed to allocate the video codec");
     }
 
     /* Copy codec parameters from input stream to output codec context */
     if ((ret = avcodec_parameters_to_context(*dec_ctx, st->codecpar)) < 0)
     {
-      fprintf(stderr, "Failed to copy %s codec parameters to decoder context\n",
-              av_get_media_type_string(type));
-      return ret;
+      return result_from(FG_ERROR_INTERNAL, "Failed to copy video codec parameters to decoder context");
     }
 
     /* Init the decoders */
     if ((ret = avcodec_open2(*dec_ctx, dec, &opts)) < 0)
     {
-      fprintf(stderr, "Failed to open %s codec\n",
-              av_get_media_type_string(type));
-      return ret;
+      return result_from(FG_ERROR_INTERNAL, "Failed to open video codec");
     }
     *stream_idx = stream_index;
   }
 
-  return 0;
+  return result_from(FG_OK, "");
 }
 
-int grab_frame(uint8_t *in_data, size_t in_size,
-               uint8_t **out_data, size_t *out_size, char **rotate)
+ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
+                          uint8_t **out_data, size_t *out_size, char **rotate)
 {
   int ret = 0;
+  ResponseStatus res = {0};
   size_t buffer_initial_size = 4096;
 
   AVFormatContext *in_format_ctx = NULL;
@@ -342,37 +338,34 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   ret = avformat_open_input(&in_format_ctx, NULL, NULL, NULL);
   if (ret < 0)
   {
-    fprintf(stderr, "Could not read bytes : %s\n", av_err2str(ret));
-    exit(1);
+    res = result_from(FG_ERROR_INVALID_INPUT, "Could not read bytes");
+    goto end;
   }
 
   /* retrieve stream information */
   ret = avformat_find_stream_info(in_format_ctx, NULL);
   if (ret < 0)
   {
-    fprintf(stderr, "Could not find stream information : %s\n", av_err2str(ret));
-    exit(1);
+    res = result_from(FG_ERROR_INVALID_INPUT, "Could not find stream information");
+    goto end;
   }
 
-  if (open_codec_context(&video_stream_idx, &decoder, in_format_ctx, AVMEDIA_TYPE_VIDEO) >= 0)
+  res = open_codec_context(&video_stream_idx, &decoder, in_format_ctx, AVMEDIA_TYPE_VIDEO);
+  if (res.code != FG_OK)
   {
-    video_stream = in_format_ctx->streams[video_stream_idx];
+    goto end;
   }
-
-  /* dump input information to stderr */
-  // av_dump_format(in_format_ctx, 0, "memory", 0);
-
+  video_stream = in_format_ctx->streams[video_stream_idx];
   if (!video_stream)
   {
-    fprintf(stderr, "Could not find audio or video stream in the input, aborting\n");
-    ret = 1;
+    res = result_from(FG_NOT_FOUND, "Could not find audio or video stream in the input");
     goto end;
   }
 
   ret = avformat_alloc_output_context2(&out_format_ctx, NULL, "mpjpeg", NULL);
   if (ret < 0)
   {
-    fprintf(stderr, "Could not allocate output format context");
+    res = result_from(FG_ERROR_INTERNAL, "Could not allocate output format context");
     goto end;
   }
 
@@ -385,18 +378,19 @@ int grab_frame(uint8_t *in_data, size_t in_size,
                                       (void *)&out_byte_buffer, NULL, write_packet, NULL);
   if (!write_avio_ctx)
   {
-    fprintf(stderr, "Could not allocate AV I/O context");
+    res = result_from(FG_ERROR_INTERNAL, "Could not allocate AV I/O context");
     goto end;
   }
 
   // initialize encoder
-  init_encoder(out_format_ctx, decoder, &encoder, write_avio_ctx);
+  res = init_encoder(out_format_ctx, decoder, &encoder, write_avio_ctx);
+  if (res.code != 200)
+    goto end;
 
   frame = av_frame_alloc();
   if (!frame)
   {
-    fprintf(stderr, "Could not allocate frame\n");
-    ret = AVERROR(ENOMEM);
+    res = result_from(FG_ERROR_INTERNAL, "Could not allocate frame");
     goto end;
   }
 
@@ -407,16 +401,17 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   pkt->size = 0;
 
   /* read frames from the file */
+  res.code = 0;
   while (av_read_frame(in_format_ctx, pkt) >= 0)
   {
     // check if the packet belongs to a stream we are interested in, otherwise
     // skip it
     if (pkt->stream_index == video_stream_idx)
-      ret = decode_packet(decoder, pkt, frame);
+      res = decode_packet(decoder, pkt, frame);
     av_packet_unref(pkt);
-    if (ret < 0)
+    if (res.code == FG_ERROR_INTERNAL)
       break;
-    if (ret == 200)
+    if (res.code == FG_OK)
       break;
   }
 
@@ -424,9 +419,15 @@ int grab_frame(uint8_t *in_data, size_t in_size,
   if (decoder)
     avcodec_send_packet(decoder, NULL);
 
-  if (ret == 200)
+  if (res.code != FG_OK)
   {
-    encode(out_format_ctx, encoder, frame, decoder->width, decoder->height);
+    goto end;
+  }
+
+  res = encode(out_format_ctx, encoder, frame, decoder->width, decoder->height);
+  if (res.code != FG_OK)
+  {
+    goto end;
   }
 
   // get rotation if any
@@ -454,11 +455,7 @@ end:
   avcodec_free_context(&encoder);
   avformat_free_context(out_format_ctx);
 
-  // free(&video_stream);
-  // free(&write_avio_ctx_buffer);
-  // free(&read_avio_ctx_buffer);
-
   *out_data = out_byte_buffer.buffer;
   *out_size = out_byte_buffer.size;
-  return ret;
+  return res;
 }
