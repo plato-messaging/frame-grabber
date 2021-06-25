@@ -1,4 +1,4 @@
-# frame_grabber
+# frame-grabber
 
 A little program that grabs the first frame of a video and returns it in a JPEG format
 
