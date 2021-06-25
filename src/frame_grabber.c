@@ -16,13 +16,9 @@
  * ~ 138 grabs per second
  */
 
-/** Everything went well */
 const int FG_OK = 200;
-/** Data is invalid for some reason (no stream found, corrupted file...) */
 const int FG_ERROR_INVALID_INPUT = 422;
-/** No frame found */
 const int FG_NOT_FOUND = 404;
-/** Internal problem */
 const int FG_ERROR_INTERNAL = 500;
 
 typedef struct DynBuffer
@@ -37,14 +33,14 @@ static int ofmt_write_header(AVFormatContext *s)
   return 0;
 }
 
-// We do not want default header that add multipart boudnary "--ffmpeg"
+// We do not want default trailer that add multipart boundary "--ffmpeg"
 static int ofmt_write_trailer(AVFormatContext *s)
 {
   return 0;
 }
 
 // Simply write data to avio
-// Otherwise, multipart header (Content_Type & Content-Length) are added
+// Otherwise, multipart headers (Content_Type & Content-Length) are added
 static int ofmt_write_packet(AVFormatContext *s, AVPacket *packet)
 {
   avio_write(s->pb, packet->data, packet->size);
