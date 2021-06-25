@@ -146,6 +146,8 @@ static ResponseStatus init_encoder(AVFormatContext *out_format_ctx, AVCodecConte
     fprintf(stderr, "Failed to open encoding context\n");
     return result_from(FG_ERROR_INTERNAL, "Failed to open encoding context\n");
   }
+  // Set IO context in OUT format context
+  // and override header, trailer and content default functions
   out_format_ctx->pb = avio_ctx;
   out_format_ctx->oformat->write_header = ofmt_write_header;
   out_format_ctx->oformat->write_trailer = ofmt_write_trailer;
@@ -246,38 +248,35 @@ static ResponseStatus open_codec_context(int *stream_idx, AVCodecContext **dec_c
   {
     return result_from(FG_ERROR_INVALID_INPUT, "Could not find video stream");
   }
-  else
+
+  stream_index = ret;
+  st = fmt_ctx->streams[stream_index];
+
+  /* find decoder for the stream */
+  dec = avcodec_find_decoder(st->codecpar->codec_id);
+  if (!dec)
   {
-    stream_index = ret;
-    st = fmt_ctx->streams[stream_index];
-
-    /* find decoder for the stream */
-    dec = avcodec_find_decoder(st->codecpar->codec_id);
-    if (!dec)
-    {
-      return result_from(FG_ERROR_INVALID_INPUT, "Failed to find codec");
-    }
-
-    /* Allocate a codec context for the decoder */
-    *dec_ctx = avcodec_alloc_context3(dec);
-    if (!*dec_ctx)
-    {
-      return result_from(FG_ERROR_INTERNAL, "Failed to allocate the video codec");
-    }
-
-    /* Copy codec parameters from input stream to output codec context */
-    if ((ret = avcodec_parameters_to_context(*dec_ctx, st->codecpar)) < 0)
-    {
-      return result_from(FG_ERROR_INTERNAL, "Failed to copy video codec parameters to decoder context");
-    }
-
-    /* Init the decoders */
-    if ((ret = avcodec_open2(*dec_ctx, dec, &opts)) < 0)
-    {
-      return result_from(FG_ERROR_INTERNAL, "Failed to open video codec");
-    }
-    *stream_idx = stream_index;
+    return result_from(FG_ERROR_INVALID_INPUT, "Failed to find codec");
   }
+
+  *dec_ctx = avcodec_alloc_context3(dec);
+  if (!*dec_ctx)
+  {
+    return result_from(FG_ERROR_INTERNAL, "Failed to allocate the video codec");
+  }
+
+  /* Copy codec parameters from input stream to output codec context */
+  if ((ret = avcodec_parameters_to_context(*dec_ctx, st->codecpar)) < 0)
+  {
+    return result_from(FG_ERROR_INTERNAL, "Failed to copy video codec parameters to decoder context");
+  }
+
+  /* Init the decoders */
+  if ((ret = avcodec_open2(*dec_ctx, dec, &opts)) < 0)
+  {
+    return result_from(FG_ERROR_INTERNAL, "Failed to open video codec");
+  }
+  *stream_idx = stream_index;
 
   return result_from(FG_OK, "");
 }
@@ -298,6 +297,7 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
 
   AVFormatContext *out_format_ctx = NULL;
   AVCodecContext *encoder = NULL;
+
   AVIOContext *write_avio_ctx = NULL;
   uint8_t *write_avio_ctx_buffer = NULL;
 
@@ -378,7 +378,6 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
     goto end;
   }
 
-  // initialize encoder
   res = init_encoder(out_format_ctx, decoder, &encoder, write_avio_ctx);
   if (res.code != 200)
     goto end;
@@ -396,7 +395,7 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
   pkt->data = NULL;
   pkt->size = 0;
 
-  /* read frames from the file */
+  /* read frames from decoder */
   res.code = 0;
   while (av_read_frame(in_format_ctx, pkt) >= 0)
   {
