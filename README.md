@@ -2,7 +2,7 @@
 
 A little program that grabs the first frame of a video and returns it in a JPEG format
 
-Video is provided as a buffer of bytes and returns the frame as a buffer of bytes
+Video is provided as a byte buffer and returns the frame as a byte buffer as well
 
 ### Usage
 #### MacOS
