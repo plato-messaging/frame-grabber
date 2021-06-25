@@ -5,7 +5,7 @@ A little program that grabs the first frame of a video and returns it in a JPEG 
 Video is provided as a byte buffer and returns the frame as a byte buffer as well
 
 ### Usage
-#### MacOS
+#### macOS
 - Run `build.sh`
 - Copy `out/libfgrabber.dylib` to `/usr/local/lib`
 
