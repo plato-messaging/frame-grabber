@@ -11,3 +11,5 @@ Video is provided as a byte buffer and returns the frame as a byte buffer as wel
 
 #### Linux
 - Run `build_and_deploy_linux.sh`
+
+*NB: `.vscode` intentionally added to repo to help whoever struggles like I did setting up VSCode
