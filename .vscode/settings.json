@@ -48,6 +48,8 @@
     "optional": "cpp",
     "system_error": "cpp",
     "typeinfo": "cpp",
-    "unordered_map": "cpp"
-  }
+    "unordered_map": "cpp",
+    "stddef.h": "c"
+  },
+  "C_Cpp.errorSquiggles": "Enabled"
 }

@@ -13,6 +13,8 @@ extern const int FG_NOT_FOUND;
 /** Internal problem */
 extern const int FG_ERROR_INTERNAL;
 
+typedef int (*ReadNBytes)(uint8_t *, size_t);
+
 typedef struct ResponseStatus
 {
   /** An FG_* value */
@@ -21,6 +23,8 @@ typedef struct ResponseStatus
   char *description;
 } ResponseStatus;
 
-ResponseStatus grab_frame(uint8_t *in_data, size_t in_size, uint8_t **out_data, size_t *out_size, char **rotate);
+ResponseStatus grab_frame_from_byte_buffer(uint8_t *in_data, size_t in_size, uint8_t **out_data, size_t *out_size, char **rotate);
+
+ResponseStatus grab_frame_from_input_stream(ReadNBytes read_n_bytes, uint8_t **out_data, size_t *out_size, char **rotate);
 
 #endif

@@ -31,7 +31,7 @@ int main(int argc, char **argv)
   }
   fprintf(stdout, "Slurped file %s\n", src_filename);
 
-  ResponseStatus res = grab_frame(buffer, buffer_size, &jpeg_data, &jpeg_size, &rotate);
+  ResponseStatus res = grab_frame_from_byte_buffer(buffer, buffer_size, &jpeg_data, &jpeg_size, &rotate);
   printf("ResponseStatus code is %d\n", res.code);
   printf("ResponseStatus additional info: %s\n", res.description);
 

@@ -109,6 +109,17 @@ static int read_packet(void *opaque, uint8_t *buf, int buf_size)
   return buf_size;
 }
 
+static int read_packet_from_input_stream(void *opaque, uint8_t *buf, int buf_size)
+{
+  ReadNBytes *pf = opaque;
+  buf_size = (*pf)(buf, buf_size);
+
+  if (!buf_size)
+    return AVERROR_EOF;
+
+  return buf_size;
+}
+
 static ResponseStatus init_encoder(AVFormatContext *out_format_ctx, AVCodecContext *decoder,
                                    AVCodecContext **encoder, AVIOContext *avio_ctx)
 {
@@ -281,7 +292,7 @@ static ResponseStatus open_codec_context(int *stream_idx, AVCodecContext **dec_c
   return result_from(FG_OK, "");
 }
 
-ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
+ResponseStatus grab_frame(uint8_t *in_data, size_t in_size, ReadNBytes read_n_bytes,
                           uint8_t **out_data, size_t *out_size, char **rotate)
 {
   int ret = 0;
@@ -305,9 +316,6 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
   AVPacket *pkt = NULL;
   int video_stream_idx = -1;
 
-  DynBuffer in_byte_buffer = {0};
-  in_byte_buffer.size = in_size;
-  in_byte_buffer.buffer = in_data;
   read_avio_ctx_buffer = av_malloc(buffer_initial_size);
 
   if (!(in_format_ctx = avformat_alloc_context()))
@@ -321,8 +329,26 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
     ret = AVERROR(ENOMEM);
     goto end;
   }
-  read_avio_ctx = avio_alloc_context(read_avio_ctx_buffer, buffer_initial_size,
-                                     0, &in_byte_buffer, &read_packet, NULL, NULL);
+
+  if (read_n_bytes)
+  {
+    read_avio_ctx = avio_alloc_context(read_avio_ctx_buffer, buffer_initial_size,
+                                       0, &read_n_bytes, &read_packet_from_input_stream, NULL, NULL);
+  }
+  else
+  {
+    if (!in_data || in_size == 0)
+    {
+      res = result_from(FG_ERROR_INVALID_INPUT, "NULL input data or size is 0");
+      goto end;
+    }
+    DynBuffer in_byte_buffer = {0};
+    in_byte_buffer.size = in_size;
+    in_byte_buffer.buffer = in_data;
+    read_avio_ctx = avio_alloc_context(read_avio_ctx_buffer, buffer_initial_size,
+                                       0, &in_byte_buffer, &read_packet, NULL, NULL);
+  }
+
   if (!read_avio_ctx)
   {
     ret = AVERROR(ENOMEM);
@@ -430,7 +456,8 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size,
   if (rotate_entry && rotate_entry->value)
   {
     // last +1 is for nul ASCII code for the string
-    *rotate = (char *)malloc(strlen(rotate_entry->value) + 1);
+    *rotate = malloc(strlen(rotate_entry->value) + 1);
+    *rotate[0] = 0;
     strcpy(*rotate, rotate_entry->value);
   }
 
@@ -453,4 +480,16 @@ end:
   *out_data = out_byte_buffer.buffer;
   *out_size = out_byte_buffer.size;
   return res;
+}
+
+ResponseStatus grab_frame_from_input_stream(ReadNBytes read_n_bytes,
+                                            uint8_t **out_data, size_t *out_size, char **rotate)
+{
+  return grab_frame(NULL, 0, read_n_bytes, out_data, out_size, rotate);
+}
+
+ResponseStatus grab_frame_from_byte_buffer(uint8_t *in_data, size_t in_size,
+                                           uint8_t **out_data, size_t *out_size, char **rotate)
+{
+  return grab_frame(in_data, in_size, NULL, out_data, out_size, rotate);
 }
