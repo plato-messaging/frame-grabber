@@ -6,4 +6,6 @@ out/
 *.MOV
 *.png
 *.iml
+*.class
+*.log
 .idea/

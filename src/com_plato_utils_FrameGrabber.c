@@ -49,11 +49,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_plato_utils_FrameGrabber_grabFrame(JNIEnv 
 
   if (response.code != FG_OK)
   {
-    char exceptionBuffer[1024];
-    sprintf(exceptionBuffer, "%s", response.description);
+    char exception_buffer[1024];
+    sprintf(exception_buffer, "%s\n", response.description);
+    jclass jexception_class = (*env)->FindClass(env, "com/plato/utils/FrameGrabberException");
     (*env)->ThrowNew(env,
-                     (*env)->FindClass(env, "com/plato/utils/FrameGrabberException"),
-                     exceptionBuffer);
+                     jexception_class,
+                     exception_buffer);
     jmethodID constructor = (*env)->GetMethodID(env, jResultClass, "<init>", "()V");
     jobject result = (*env)->NewObject(env, jResultClass, constructor);
     return result;

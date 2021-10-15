@@ -27,7 +27,7 @@ public class FrameGrabber {
 
   public static void main(String[] args) {
     try (var out = new FileOutputStream("thumbnail.jpeg"); var in = new FileInputStream(
-        "IMG_0010.MOV")) {
+        "897.mp4")) {
       var frameGrabber = new FrameGrabber(in);
       var result = frameGrabber.grabFrame();
       System.out.println("Read " + frameGrabber.currentlyReadBytes / 1024 + "KB");
