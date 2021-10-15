@@ -1,18 +1,21 @@
 {
-  "configurations": [{
-    "name": "Mac",
-    "includePath": [
-      "${workspaceFolder}/**",
-      "/Users/alanmantoux/Coding/external repos/ffmpeg/**"
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/Users/alanmantoux/Coding/external repos/ffmpeg/**",
+                "/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home/include/**"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++98",
+            "intelliSenseMode": "macos-clang-x64"
+        }
     ],
-    "defines": [],
-    "macFrameworkPath": [
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
-    ],
-    "compilerPath": "/usr/bin/clang",
-    "cStandard": "c17",
-    "cppStandard": "c++98",
-    "intelliSenseMode": "macos-clang-x64"
-  }],
-  "version": 4
+    "version": 4
 }

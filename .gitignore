@@ -5,3 +5,5 @@ out/
 *.MP4
 *.MOV
 *.png
+*.iml
+.idea/
