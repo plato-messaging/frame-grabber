@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "frame_grabber.h"
-#include "com_plato_utils_FrameGrabber.h"
+#include "com_plato_utils_fgrabber_FrameGrabber.h"
 
 JNIEnv *gEnv = NULL;
 jobject gThis;
@@ -28,7 +28,7 @@ static int read_n_bytes(uint8_t *buff, size_t buff_size)
   return result;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_com_plato_utils_FrameGrabber_grabFrame(JNIEnv *env, jobject thisObject)
+JNIEXPORT jobject JNICALL Java_com_plato_utils_fgrabber_FrameGrabber_grabFrame(JNIEnv *env, jobject thisObject)
 {
   gEnv = env;
   gThis = thisObject;
@@ -45,13 +45,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_plato_utils_FrameGrabber_grabFrame(JNIEnv 
   gEnv = NULL;
   gThis = NULL;
 
-  jclass jResultClass = (*env)->FindClass(env, "com/plato/utils/FrameGrabber$Result");
+  jclass jResultClass = (*env)->FindClass(env, "com/plato/utils/fgrabber/FrameGrabber$Result");
 
   if (response.code != FG_OK)
   {
     char exception_buffer[1024];
     sprintf(exception_buffer, "%s\n", response.description);
-    jclass jexception_class = (*env)->FindClass(env, "com/plato/utils/FrameGrabberException");
+    jclass jexception_class = (*env)->FindClass(env, "com/plato/utils/fgrabber/FrameGrabberException");
     (*env)->ThrowNew(env,
                      jexception_class,
                      exception_buffer);

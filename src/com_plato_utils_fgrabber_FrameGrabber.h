@@ -2,8 +2,8 @@
 #include <jni.h>
 /* Header for class com_plato_utils_FrameGrabber */
 
-#ifndef _Included_com_plato_utils_FrameGrabber
-#define _Included_com_plato_utils_FrameGrabber
+#ifndef _Included_com_plato_utils_fgrabber_FrameGrabber
+#define _Included_com_plato_utils_fgrabber_FrameGrabber
 #ifdef __cplusplus
 extern "C"
 {
@@ -13,7 +13,7 @@ extern "C"
  * Method:    startProcedure
  * Signature: ()V
  */
-  JNIEXPORT jbyteArray JNICALL Java_com_plato_utils_FrameGrabber_grabFrame(JNIEnv *, jobject);
+  JNIEXPORT jobject JNICALL Java_com_plato_utils_fgrabber_FrameGrabber_grabFrame(JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }
