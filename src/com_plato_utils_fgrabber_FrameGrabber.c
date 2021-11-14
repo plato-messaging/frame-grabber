@@ -19,11 +19,11 @@ static int read_n_bytes(uint8_t *buff, size_t buff_size)
 
   /* get the body of array; it will be referecende by C pointer */
   jsize len = (*gEnv)->GetArrayLength(gEnv, byteArray);
-  jboolean *body = (*gEnv)->GetBooleanArrayElements(gEnv, byteArray, 0);
+  jbyte *body = (*gEnv)->GetByteArrayElements(gEnv, byteArray, 0);
   memcpy(buff, body, len);
 
   /* release body when you decide it is no longer needed */
-  (*gEnv)->ReleaseBooleanArrayElements(gEnv, byteArray, body, 0);
+  (*gEnv)->ReleaseByteArrayElements(gEnv, byteArray, body, 0);
 
   return result;
 }
