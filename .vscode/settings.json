@@ -49,7 +49,11 @@
     "system_error": "cpp",
     "typeinfo": "cpp",
     "unordered_map": "cpp",
-    "stddef.h": "c"
+    "stddef.h": "c",
+    "codec.h": "c"
   },
-  "C_Cpp.errorSquiggles": "Enabled"
+  "C_Cpp.errorSquiggles": "Enabled",
+  "C_Cpp.default.macFrameworkPath": [
+    "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+  ]
 }

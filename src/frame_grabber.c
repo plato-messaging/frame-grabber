@@ -1,8 +1,6 @@
-#include <libavutil/imgutils.h>
-#include <libavutil/samplefmt.h>
-#include <libavutil/timestamp.h>
-#include <libavutil/file.h>
+#include <libavutil/avutil.h>
 #include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 #include "frame_grabber.h"
 
 /**
@@ -126,8 +124,7 @@ static ResponseStatus init_encoder(AVFormatContext *out_format_ctx, AVCodecConte
   int ret;
   ResponseStatus res = {0};
   AVStream *out_stream;
-  AVOutputFormat *output_fmt = av_guess_format("mpjpeg", NULL, NULL);
-  enum AVCodecID codec_id = av_guess_codec(output_fmt, "mpjpeg", NULL, NULL, AVMEDIA_TYPE_VIDEO);
+  enum AVCodecID codec_id = av_guess_codec(out_format_ctx->oformat, "mpjpeg", NULL, NULL, AVMEDIA_TYPE_VIDEO);
   AVCodec *encoding_codec = avcodec_find_encoder(codec_id);
 
   // Init stram
@@ -160,9 +157,6 @@ static ResponseStatus init_encoder(AVFormatContext *out_format_ctx, AVCodecConte
   // Set IO context in OUT format context
   // and override header, trailer and content default functions
   out_format_ctx->pb = avio_ctx;
-  out_format_ctx->oformat->write_header = ofmt_write_header;
-  out_format_ctx->oformat->write_trailer = ofmt_write_trailer;
-  out_format_ctx->oformat->write_packet = ofmt_write_packet;
 
   /* init muxer, write output file header */
   ret = avformat_write_header(out_format_ctx, NULL);
@@ -384,7 +378,11 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size, ReadNBytes read_n_by
     goto end;
   }
 
-  ret = avformat_alloc_output_context2(&out_format_ctx, NULL, "mpjpeg", NULL);
+  AVOutputFormat *output_fmt = av_guess_format("mpjpeg", NULL, NULL);
+  output_fmt->write_header = ofmt_write_header;
+  output_fmt->write_trailer = ofmt_write_trailer;
+  output_fmt->write_packet = ofmt_write_packet;
+  ret = avformat_alloc_output_context2(&out_format_ctx, output_fmt, "mpjpeg", NULL);
   if (ret < 0)
   {
     res = result_from(FG_ERROR_INTERNAL, "Could not allocate output format context");

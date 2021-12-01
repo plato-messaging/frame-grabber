@@ -1,6 +1,7 @@
 {
   "version": "2.0.0",
-  "tasks": [{
+  "tasks": [
+    {
       "type": "cppbuild",
       "label": "Build Fast",
       "command": "/usr/bin/clang",
@@ -13,7 +14,7 @@
         "-Ofast",
         "-lavcodec",
         "-lavformat",
-        "-lavutil",
+        "-lavutil"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -21,10 +22,7 @@
       "problemMatcher": [
         "$gcc"
       ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
+      "group": "build",
       "detail": "compilateur : /usr/bin/clang"
     },
     {
@@ -39,7 +37,7 @@
         "${workspaceFolder}/out/testFFMpeg",
         "-lavcodec",
         "-lavformat",
-        "-lavutil",
+        "-lavutil"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -65,7 +63,7 @@
         "${workspaceFolder}/out/libframegrabber",
         "-lavcodec",
         "-lavutil",
-        "-lavformat",
+        "-lavformat"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
