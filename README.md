@@ -1,4 +1,4 @@
-# frame-grabber
+# Frame Grabber
 
 A little program that grabs the first frame of a video and returns it in a JPEG format
 
@@ -16,5 +16,11 @@ Video is provided as a byte buffer and returns the frame as a byte buffer as wel
 
 ### Ffmpeg dylib generation
 See: [Compilation guide](https://trac.ffmpeg.org/wiki/CompilationGuide/Generic)
-- Run `./configure --prefix=/usr/local --enable-shared`(`enable-shared` to generate `*.dylib`)
-- Run `make install`
+- Run following command to deploy libraries in `prefix` directory (`enable-shared` to generate `*.dylib`)
+```bash
+./configure --prefix=/usr/local --enable-shared
+```
+- Run 
+```bash
+make install
+
