@@ -1,4 +1,5 @@
 #include <libavutil/avutil.h>
+#include <libavutil/opt.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include "frame_grabber.h"
@@ -6,8 +7,8 @@
 /**
  * @brief Grabs the first frame of video data provided in a byte array
  * Return the frame in JPEG format. The data is returned in a byte array along with
- * any rotate hints 
- * 
+ * any rotate hints
+ *
  * Memory tests:
  * - 100 000 grabs -> memory capped at 21MB (seems to stabilize after the 50 000 first grabs)
  * Performance:
@@ -19,11 +20,44 @@ const int FG_ERROR_INVALID_INPUT = 422;
 const int FG_NOT_FOUND = 404;
 const int FG_ERROR_INTERNAL = 500;
 
+/**
+ * @brief Dynamic buffer that fills / reads incrementally
+ *
+ * available size = size - pos
+ */
 typedef struct DynBuffer
 {
-  int pos, allocated_size, size;
+  int pos;            // current position in buffer
+  int allocated_size; // current allocated size in buffer
+  int size;           // buffer target size (e.g.: file size)
   uint8_t *buffer;
 } DynBuffer;
+
+static int64_t seek(void *opaque, int64_t offset, int whence)
+{
+  DynBuffer *c = opaque;
+
+  if (whence == SEEK_CUR)
+  {
+    if (offset > INT64_MAX - c->pos)
+      return -1;
+    offset += c->pos;
+  }
+  else if (whence == SEEK_END)
+  {
+    if (offset > INT64_MAX - c->size)
+      return -1;
+    offset += c->size;
+  }
+  else if (whence == AVSEEK_SIZE)
+  {
+    return c->size;
+  }
+  if (offset < 0 || offset > c->size)
+    return -1;
+  c->pos = offset;
+  return 0;
+}
 
 // We do not want default header that add multipart boundary "--ffmpeg"
 static int ofmt_write_header(AVFormatContext *s)
@@ -86,23 +120,26 @@ static int write_packet(void *opaque, uint8_t *buf, int buf_size)
   }
   memcpy(d->buffer + d->pos, buf, buf_size);
   d->pos = new_size;
+  // position should never exceed size
   if (d->pos > d->size)
+  {
     d->size = d->pos;
+  }
   return buf_size;
 }
 
 static int read_packet(void *opaque, uint8_t *buf, int buf_size)
 {
   DynBuffer *d = opaque;
-  buf_size = FFMIN(buf_size, d->size);
+  buf_size = FFMIN(buf_size, d->size - d->pos);
+  printf("reading %d bytes\n", buf_size);
 
   if (!buf_size)
     return AVERROR_EOF;
 
   /* copy internal buffer data to buf */
-  memcpy(buf, d->buffer, buf_size);
-  d->buffer += buf_size;
-  d->size -= buf_size;
+  memcpy(buf, d->buffer + d->pos, buf_size);
+  d->pos += buf_size;
 
   return buf_size;
 }
@@ -291,7 +328,7 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size, ReadNBytes read_n_by
 {
   int ret = 0;
   ResponseStatus res = {0};
-  size_t buffer_initial_size = 4096;
+  size_t buffer_initial_size = 32768;
 
   AVFormatContext *in_format_ctx = NULL;
   AVCodecContext *decoder = NULL;
@@ -340,7 +377,7 @@ ResponseStatus grab_frame(uint8_t *in_data, size_t in_size, ReadNBytes read_n_by
     in_byte_buffer.size = in_size;
     in_byte_buffer.buffer = in_data;
     read_avio_ctx = avio_alloc_context(read_avio_ctx_buffer, buffer_initial_size,
-                                       0, &in_byte_buffer, &read_packet, NULL, NULL);
+                                       0, &in_byte_buffer, &read_packet, NULL, &seek);
   }
 
   if (!read_avio_ctx)

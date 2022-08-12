@@ -1,5 +1,6 @@
 {
   "files.associations": {
+    "*.yaml": "yaml",
     "avcodec.h": "c",
     "ios": "c",
     "stdint.h": "c",
@@ -50,7 +51,9 @@
     "typeinfo": "cpp",
     "unordered_map": "cpp",
     "stddef.h": "c",
-    "codec.h": "c"
+    "codec.h": "c",
+    "frame_grabber.h": "c",
+    "avformat.h": "c"
   },
   "C_Cpp.errorSquiggles": "Enabled",
   "C_Cpp.default.macFrameworkPath": [
