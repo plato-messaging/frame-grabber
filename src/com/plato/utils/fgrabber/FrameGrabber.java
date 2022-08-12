@@ -5,13 +5,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class FrameGrabber {
 
   static {
-    System.loadLibrary("fgrabber");
+      System.loadLibrary("fgrabber");
   }
 
   private final InputStream in;
@@ -26,11 +24,11 @@ public class FrameGrabber {
   }
 
   public static void main(String[] args) {
-    try (var out = new FileOutputStream("thumbnail.jpeg"); var in = new FileInputStream("IMG_0007.MP4")) {
+    try (var out = new FileOutputStream("thumbnail.jpeg"); var in = new FileInputStream("897.mp4")) {
       var frameGrabber = new FrameGrabber(in);
       var result = frameGrabber.grabFrame();
       System.out.println("Read " + frameGrabber.currentlyReadBytes / 1024 + "KB");
-      System.out.println("Size of thumbnail: "+ result.thumbnailBytes.length);
+      System.out.println("Size of thumbnail: " + result.thumbnailBytes.length);
       out.write(result.thumbnailBytes);
       out.flush();
       System.out.println("Rotation: " + result.rotation);
@@ -41,10 +39,20 @@ public class FrameGrabber {
 
   public native Result grabFrame();
 
-  public int readBytes(byte[] buffer) throws IOException {
+  public int readNBytes(byte[] buffer) throws IOException {
     var nbRead = in.readNBytes(buffer, 0, buffer.length);
     currentlyReadBytes += nbRead;
     return nbRead;
+  }
+
+  public byte[] readAllBytes() {
+    try {
+      var bytes = in.readAllBytes();
+      currentlyReadBytes = bytes.length;
+      return bytes;
+    } catch (Exception e) {
+      return new byte[] {};
+    }
   }
 
   public static class Result {

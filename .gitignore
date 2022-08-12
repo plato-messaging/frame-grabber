@@ -8,4 +8,5 @@ out/
 *.iml
 *.class
 *.log
+*.dylib
 .idea/

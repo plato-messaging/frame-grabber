@@ -53,10 +53,12 @@
     "stddef.h": "c",
     "codec.h": "c",
     "frame_grabber.h": "c",
-    "avformat.h": "c"
+    "avformat.h": "c",
+    "jni.h": "c"
   },
   "C_Cpp.errorSquiggles": "Enabled",
   "C_Cpp.default.macFrameworkPath": [
     "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
-  ]
+  ],
+  "java.project.outputPath": "out"
 }

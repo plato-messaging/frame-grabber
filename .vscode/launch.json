@@ -5,6 +5,21 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "java",
+      "name": "Launch Java Program",
+      "request": "launch",
+      "mainClass": "com.plato.utils.fgrabber.FrameGrabber",
+      "args": "-Djava.library.path=.",
+      "preLaunchTask": "java (build): Build Workspace"
+    },
+    {
+      "type": "java",
+      "name": "Launch FrameGrabber",
+      "request": "launch",
+      "mainClass": "com.plato.utils.fgrabber.FrameGrabber",
+      "projectName": "frame_grabber_67b9fcf1"
+    },
+    {
       "name": "Debug",
       "type": "cppdbg",
       "request": "launch",

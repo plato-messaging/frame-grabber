@@ -132,7 +132,6 @@ static int read_packet(void *opaque, uint8_t *buf, int buf_size)
 {
   DynBuffer *d = opaque;
   buf_size = FFMIN(buf_size, d->size - d->pos);
-  printf("reading %d bytes\n", buf_size);
 
   if (!buf_size)
     return AVERROR_EOF;
@@ -518,7 +517,8 @@ end:
 }
 
 ResponseStatus grab_frame_from_input_stream(ReadNBytes read_n_bytes,
-                                            uint8_t **out_data, size_t *out_size, char **rotate)
+                                            uint8_t **out_data, size_t *out_size,
+                                            char **rotate)
 {
   return grab_frame(NULL, 0, read_n_bytes, out_data, out_size, rotate);
 }

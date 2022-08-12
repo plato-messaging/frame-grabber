@@ -4,8 +4,8 @@
       "name": "Mac",
       "includePath": [
         "${workspaceFolder}/**",
-        "/Users/alanmantoux/Coding/external repos/Ffmpeg/**",
         "/Library/Java/JavaVirtualMachines/jdk-17.0.3.jdk/Contents/Home/include/**"
+        // "/Users/alanmantoux/Coding/external repos/Ffmpeg/**"
       ],
       "defines": [],
       "macFrameworkPath": [

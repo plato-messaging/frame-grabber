@@ -14,7 +14,7 @@ static int read_n_bytes(uint8_t *buff, size_t buff_size)
 
   // Find and invoke Java read method
   jclass thisClass = (*gEnv)->GetObjectClass(gEnv, gThis);
-  jmethodID methodId = (*gEnv)->GetMethodID(gEnv, thisClass, "readBytes", "([B)I");
+  jmethodID methodId = (*gEnv)->GetMethodID(gEnv, thisClass, "readNBytes", "([B)I");
   jint result = (*gEnv)->CallIntMethod(gEnv, gThis, methodId, byteArray);
 
   /* get the body of array; it will be referecende by C pointer */
@@ -28,6 +28,34 @@ static int read_n_bytes(uint8_t *buff, size_t buff_size)
   return result;
 }
 
+typedef struct ByteArray
+{
+  int8_t *buffer;
+  size_t length
+} ByteArray;
+
+static ByteArray read_all_bytes()
+{
+  ByteArray *byteArray = NULL;
+  // Find and invoke Java read method
+  jclass thisClass = (*gEnv)->GetObjectClass(gEnv, gThis);
+  jmethodID methodId = (*gEnv)->GetMethodID(gEnv, thisClass, "readAllBytes", "()[B");
+  jbyteArray jByteArray = (*gEnv)->CallObjectMethod(gEnv, gThis, methodId);
+
+  jsize len = (*gEnv)->GetArrayLength(gEnv, jByteArray);
+  jbyte *body = (*gEnv)->GetByteArrayElements(gEnv, jByteArray, 0);
+
+  byteArray = malloc(sizeof *byteArray);
+  byteArray->buffer = (int8_t *)malloc(len * sizeof(int8_t));
+  memcpy(byteArray->buffer, body, len);
+  byteArray->length = len;
+
+  /* release body when you decide it is no longer needed */
+  (*gEnv)->ReleaseByteArrayElements(gEnv, jByteArray, body, 0);
+
+  return *byteArray;
+}
+
 JNIEXPORT jobject JNICALL Java_com_plato_utils_fgrabber_FrameGrabber_grabFrame(JNIEnv *env, jobject thisObject)
 {
   gEnv = env;
@@ -37,10 +65,11 @@ JNIEXPORT jobject JNICALL Java_com_plato_utils_fgrabber_FrameGrabber_grabFrame(J
   size_t thumbnail_size;
   char *rotation = NULL;
 
-  ResponseStatus response = grab_frame_from_input_stream(&read_n_bytes,
-                                                         &thumbnail_bytes,
-                                                         &thumbnail_size,
-                                                         &rotation);
+  ByteArray byteArray = read_all_bytes();
+
+  ResponseStatus response = grab_frame_from_byte_buffer(byteArray.buffer, byteArray.length,
+                                                        &thumbnail_bytes, &thumbnail_size,
+                                                        &rotation);
 
   gEnv = NULL;
   gThis = NULL;
@@ -74,6 +103,7 @@ JNIEXPORT jobject JNICALL Java_com_plato_utils_fgrabber_FrameGrabber_grabFrame(J
   free(thumbnail_bytes);
   if (rotation)
     free(rotation);
+  free(byteArray.buffer);
 
   return result;
 }
