@@ -1,4 +1,5 @@
 out/
+libfgrabber.so
 .DS_store
 *.jpeg
 *.jpg

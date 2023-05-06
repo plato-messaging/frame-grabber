@@ -10,9 +10,11 @@ Video is provided as a byte buffer and returns the frame as a byte buffer as wel
 - Copy `out/libfgrabber.dylib` to `/usr/local/lib`
 
 #### Linux
-- Run `build_and_deploy_linux.sh`
+- Make sure to set `JAVA_HOME` as env variable
+- `sudo apt install clang`
+- Run `build_linux.sh` or `build_and_deploy_linux.sh`
 
-*NB: `.vscode` intentionally added to repo to help whoever struggles setting up VSCode
+*NB: `.vscode` intentionally added to repo to help whoever struggles setting up VSCode*
 
 ### Ffmpeg dylib generation
 See: [Compilation guide](https://trac.ffmpeg.org/wiki/CompilationGuide/Generic)
