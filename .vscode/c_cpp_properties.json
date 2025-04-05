@@ -6,7 +6,7 @@
         "${workspaceFolder}/**",
         "/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home/include/**",
         // Path to FFmpeg headers
-        "/Users/alanmantoux/Coding/external repos/Ffmpeg/**"
+        "/Users/alanmantoux/Coding/external repos/FFmpeg/**"
       ],
       "defines": [],
       "macFrameworkPath": [

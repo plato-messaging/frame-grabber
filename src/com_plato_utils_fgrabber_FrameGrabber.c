@@ -31,7 +31,7 @@ static int read_n_bytes(uint8_t *buff, size_t buff_size)
 typedef struct ByteArray
 {
   int8_t *buffer;
-  size_t length
+  size_t length;
 } ByteArray;
 
 static ByteArray read_all_bytes()

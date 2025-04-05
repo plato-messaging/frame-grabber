@@ -6,6 +6,10 @@ Video is provided as a byte buffer and returns the frame as a byte buffer as wel
 
 ### Usage
 #### macOS
+- compile FFmpeg (see section *FFmpeg dylib generation*)
+- add to `.zprofile` 
+```export CPATH=CPATH:<path to FFmpeg cloned git repo>```
+- Run `source ~/.zprofile`
 - Run `build.sh`
 - Copy `out/libfgrabber.dylib` to `/usr/local/lib`
 
@@ -16,7 +20,7 @@ Video is provided as a byte buffer and returns the frame as a byte buffer as wel
 
 *NB: `.vscode` intentionally added to repo to help whoever struggles setting up VSCode*
 
-### Ffmpeg dylib generation
+### FFmpeg dylib generation
 See: [Compilation guide](https://trac.ffmpeg.org/wiki/CompilationGuide/Generic)
 - Run following command to deploy libraries in `prefix` directory (`enable-shared` to generate `*.dylib`)
 ```bash
